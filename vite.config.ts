@@ -9,10 +9,10 @@ export default defineConfig({
     outDir: path.join(__dirname, 'static'),
   },
   server: {
-    https: {
-      cert: path.join(__dirname, 'cert', 'localhost.pem'),
-      key: path.join(__dirname, 'cert', 'localhost-key.pem'),
-    },
+    // https: {
+    //   cert: path.join(__dirname, 'cert', 'localhost.pem'),
+    //   key: path.join(__dirname, 'cert', 'localhost-key.pem'),
+    // },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

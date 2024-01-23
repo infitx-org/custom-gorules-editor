@@ -37,6 +37,9 @@ export const DecisionSimplePage: React.FC = () => {
   const [simulateData, setSimulateData] = useState<unknown>(null);
   const [simulateLoading, setSimulateLoading] = useState(false);
 
+  const [loadedFromServer, setLoadedFromServer] = useState(false);
+
+
   useEffect(() => {
     const templateParam = searchParams.get('template');
     if (templateParam) {
@@ -97,6 +100,18 @@ export const DecisionSimplePage: React.FC = () => {
       displayError(err);
     }
   };
+
+  const exportToServer = async () => {
+    try {
+      const ruleContent = JSON.stringify({ contentType: DocumentFileTypes.Decision, ...graph }, null, 2);
+      await axios.post('http://localhost:8000/rule-compiler/test/corridor-assignment-rules', {
+        ruleContent,
+      });
+      message.success('Rule exported');
+    } catch (e) {
+      displayError(e);
+    }
+  }
 
   const saveFileAs = async () => {
     if (!supportFSApi) {
@@ -166,6 +181,11 @@ export const DecisionSimplePage: React.FC = () => {
     switch (e.key) {
       case 'file-system':
         openFile();
+        break;
+      case 'corridor-assignment':
+        const res1 = await axios.get('http://localhost:8000/rule-compiler/test/corridor-assignment-rules');
+        setLoadedFromServer(true);
+        setGraph(JSON.parse(res1.data.ruleContent));
         break;
       default: {
         if (Object.hasOwn(decisionTemplates, e.key)) {
@@ -299,17 +319,24 @@ export const DecisionSimplePage: React.FC = () => {
                           type: 'divider',
                         },
                         {
-                          label: 'Fintech: Company analysis',
-                          key: 'company-analysis',
+                          label: 'Corridor Assignment',
+                          key: 'corridor-assignment',
                         },
-                        {
-                          label: 'Fintech: AML',
-                          key: 'aml',
-                        },
-                        {
-                          label: 'Retail: Shipping fees',
-                          key: 'shipping-fees',
-                        },
+                        // {
+                        //   type: 'divider',
+                        // },
+                        // {
+                        //   label: 'Fintech: Company analysis',
+                        //   key: 'company-analysis',
+                        // },
+                        // {
+                        //   label: 'Fintech: AML',
+                        //   key: 'aml',
+                        // },
+                        // {
+                        //   label: 'Retail: Shipping fees',
+                        //   key: 'shipping-fees',
+                        // },
                       ],
                     }}
                   >
@@ -325,6 +352,12 @@ export const DecisionSimplePage: React.FC = () => {
                   <Button onClick={saveFileAs} type={'text'} size={'small'}>
                     Save as
                   </Button>
+                  {loadedFromServer && (
+                    <Button onClick={exportToServer} type={'text'} size={'small'}>
+                      Export
+                    </Button>
+                  )}
+
                 </Stack>
               </div>
             </div>
