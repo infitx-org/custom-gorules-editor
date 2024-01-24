@@ -38,6 +38,9 @@ export const DecisionSimplePage: React.FC = () => {
   const [simulateLoading, setSimulateLoading] = useState(false);
 
   const [loadedFromServer, setLoadedFromServer] = useState(false);
+  const [corridors, setCorridors] = useState<any>({});
+  const [selectedRuleType, setSelectedRuleType] = useState<any>(null);
+  const [selectedRuleName, setSelectedRuleName] = useState<any>(null);
 
 
   useEffect(() => {
@@ -101,12 +104,20 @@ export const DecisionSimplePage: React.FC = () => {
     }
   };
 
+  const refreshCorridors = async () => {
+    const corridorsResponse = await axios.get('http://localhost:8000/rule-compiler/test/corridor-rules');
+    setCorridors(corridorsResponse.data);
+  }
+
   const exportToServer = async () => {
     try {
-      const ruleContent = JSON.stringify({ contentType: DocumentFileTypes.Decision, ...graph }, null, 2);
-      await axios.post('http://localhost:8000/rule-compiler/test/corridor-assignment-rules', {
-        ruleContent,
-      });
+      const ruleContent = { contentType: DocumentFileTypes.Decision, ...graph };
+      if (selectedRuleType === 'corridor-assignment') {
+        await axios.post('http://localhost:8000/rule-compiler/test/corridor-assignment-rules', ruleContent);
+      } else if (selectedRuleType === 'corridor') {
+        await axios.post(`http://localhost:8000/rule-compiler/test/corridor-rules/${selectedRuleName}`, ruleContent);
+      }
+      await refreshCorridors();
       message.success('Rule exported');
     } catch (e) {
       displayError(e);
@@ -183,11 +194,24 @@ export const DecisionSimplePage: React.FC = () => {
         openFile();
         break;
       case 'corridor-assignment':
-        const res1 = await axios.get('http://localhost:8000/rule-compiler/test/corridor-assignment-rules');
+        const corridorAssignmentRulesResponse = await axios.get('http://localhost:8000/rule-compiler/test/corridor-assignment-rules');
         setLoadedFromServer(true);
-        setGraph(JSON.parse(res1.data.ruleContent));
+        setSelectedRuleType('corridor-assignment');
+        setSelectedRuleName('corridor-assignment');
+        setGraph(corridorAssignmentRulesResponse.data);
+        break;
+      case 'refresh-corridors':
+        await refreshCorridors();
         break;
       default: {
+        if (e.key.startsWith('select-corridor-rule-')) {
+          const corridor = e.key.replace('select-corridor-rule-', '');
+          setLoadedFromServer(true);
+          setSelectedRuleType('corridor');
+          setSelectedRuleName(corridor);
+          setGraph(corridors[corridor]);
+          break;
+        }
         if (Object.hasOwn(decisionTemplates, e.key)) {
           Modal.confirm({
             title: 'Open example',
@@ -322,9 +346,16 @@ export const DecisionSimplePage: React.FC = () => {
                           label: 'Corridor Assignment',
                           key: 'corridor-assignment',
                         },
-                        // {
-                        //   type: 'divider',
-                        // },
+                        {
+                          type: 'divider',
+                        },
+                        {
+                          label: 'Refresh Corridors',
+                          key: 'refresh-corridors',
+                        },
+                        {
+                          type: 'divider',
+                        },
                         // {
                         //   label: 'Fintech: Company analysis',
                         //   key: 'company-analysis',
@@ -337,14 +368,18 @@ export const DecisionSimplePage: React.FC = () => {
                         //   label: 'Retail: Shipping fees',
                         //   key: 'shipping-fees',
                         // },
-                      ],
+                      ].concat(
+                        Object.keys(corridors).map((key) => ({
+                          label: key,
+                          key: 'select-corridor-rule-' + key,
+                        }))),
                     }}
                   >
                     <Button type={'text'} size={'small'}>
                       Open
                     </Button>
                   </Dropdown>
-                  {supportFSApi && (
+                  {supportFSApi && !loadedFromServer && (
                     <Button onClick={saveFile} type={'text'} size={'small'}>
                       Save
                     </Button>
@@ -419,3 +454,5 @@ export const DecisionSimplePage: React.FC = () => {
     </>
   );
 };
+
+
